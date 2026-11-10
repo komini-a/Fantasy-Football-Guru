@@ -1,8 +1,8 @@
-# fantasy_football_trade_calculator
+# Fantasy Football Guru
 
 A basic full stack application that gives a grade value for each side of a fantasy football trade to ensure you are getting the most out of your trades.
 
-## Run the calculator on your computer
+## Run the app on your computer
 
 You can open the home page as soon as you finish steps 1–3. To search for players and grade trades, also connect the app to a database with player records in step 4.
 
