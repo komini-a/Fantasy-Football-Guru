@@ -106,35 +106,26 @@ context. The existing database catalog supports offensive skill positions only.
 
 The server requires the existing database runtime configuration (`DB_HOST`,
 `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`) and imported player/scoring data.
-Supply `GEMINI_KEY` and `GEMINI_MODEL` in the server environment. Use a Gemini
-model supporting JSON Schema structured output; the model can be a bare model
-ID or start with `models/`. The Gemini key stays on the server. No new
-database migration or production dependency is required. Allow at least 60
-seconds for the endpoint in the hosting configuration.
+To enable AI ratings on your computer, add your own Gemini API key and model
+ID to the project's ignored `.env.local` file. Replace both placeholders.
 
-To enable paid ratings, generate a separate lineup access code on your computer.
-
-```sh
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```dotenv
+GEMINI_KEY=your_private_gemini_api_key
+GEMINI_MODEL=your_gemini_model_id
 ```
 
-Save the output as `LINEUP_ACCESS_TOKEN` in the server environment or your ignored
-`.env.local` file and restart the app. Enter that code in the lineup form. Share
-it privately only with people allowed to spend your Gemini quota. You can revoke
-all copies by replacing the value on the server and restarting. Keep the Gemini
-key out of the form. The roster, league settings and optional notes go to Google
-Gemini when you submit. Rankings and trade calculations work without AI credentials.
+Choose a model that supports JSON Schema structured output, then restart
+`npm run dev`. Open **Lineup Rating**, fill in your roster and select
+**Rate my lineup**. Your local server uses the key to send your roster, league
+settings and optional notes to Gemini. Requests use your own Gemini quota.
+Player rankings and trade calculations work without a Gemini key.
 
-For a hosted demo, serve the app over HTTPS. Leave `LINEUP_ACCESS_TOKEN` unset for
-a public demo with paid ratings disabled. To offer ratings to invited users,
-set a provider quota and rate-limit the endpoint at the host. Keep MySQL on a
-private network. Use a DNS hostname matching its TLS certificate for remote
+Keep MySQL on a private network. Use a DNS hostname matching its TLS certificate for remote
 connections. The app accepts a private CA's PEM contents via `DB_SSL_CA`. The
 PHP import command requires a CA file path in `FF_DB_SSL_CA` for remote imports.
 
 `GET /api/lineup-review?season=2026&scoring=PPR` loads player data for entry.
-`POST /api/lineup-review` requires an `Authorization: Bearer <lineup access code>`
-header and accepts `LineupRequest` from `lib/lineup/types.ts`. It
+`POST /api/lineup-review` accepts `LineupRequest` from `lib/lineup/types.ts`. It
 validates unique selections and position eligibility, and reloads canonical
 player facts before calling the server-only AI service. History and projections
 are labeled with the selected season and projection window; absent or stale

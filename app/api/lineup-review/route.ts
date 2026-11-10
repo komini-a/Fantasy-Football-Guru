@@ -1,5 +1,4 @@
 import { AIServiceError } from "@/lib/ai/service";
-import { timingSafeEqual } from "node:crypto";
 import { scoringFormats, type ScoringFormat } from "@/lib/rankings";
 import { evaluateLineup, getLineupData } from "@/lib/lineup/server";
 import {
@@ -63,20 +62,6 @@ async function readInput(request: Request): Promise<unknown> {
 }
 
 export async function POST(request: Request) {
-  const token = process.env.LINEUP_ACCESS_TOKEN;
-  if (!token || !/^[a-f\d]{64}$/i.test(token))
-    return Response.json(
-      { message: "AI ratings are disabled until the owner configures a lineup access code." },
-      { status: 503, headers },
-    );
-  const authorization = request.headers.get("authorization") ?? "";
-  const expected = Buffer.from(`Bearer ${token}`);
-  const supplied = Buffer.from(authorization);
-  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
-    return Response.json(
-      { message: "Enter a valid lineup access code to request a rating." },
-      { status: 401, headers: { ...headers, "WWW-Authenticate": "Bearer" } },
-    );
   try {
     const input = parseLineupRequest(await readInput(request));
     const data = await getLineupData(

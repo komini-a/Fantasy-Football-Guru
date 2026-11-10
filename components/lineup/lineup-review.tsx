@@ -23,7 +23,6 @@ import { LineupResults } from "./lineup-results";
 type Loaded = { key: string; data: LineupData | null; error: string | null };
 
 export function LineupReview() {
-  const [accessCode, setAccessCode] = useState("");
   const [settings, setSettings] = useState<LineupSettings>(() => ({
     league: "redraft",
     scoring: "PPR",
@@ -180,10 +179,7 @@ export function LineupReview() {
     try {
       const response = await fetch("/api/lineup-review", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessCode.trim()}`,
-        },
+        headers: { "Content-Type": "application/json" },
         redirect: "error",
         body: JSON.stringify(input),
         signal: AbortSignal.any([
@@ -340,18 +336,10 @@ export function LineupReview() {
               </section>
             </>
           )}
-          <label className="lineup-notes">
-            Lineup access code
-            <input
-              type="password"
-              autoComplete="off"
-              required
-              maxLength={64}
-              value={accessCode}
-              onChange={(event) => setAccessCode(event.target.value)}
-            />
-            <small>The app sends your roster, league settings and notes to Google Gemini when you request a rating. Keep personal details out of your notes.</small>
-          </label>
+          <p className="trade-help">
+            Requesting a rating sends your roster, league settings and notes to
+            Google Gemini. Keep personal details out of your notes.
+          </p>
           <div className="lineup-submit">
             <button
               type="submit"

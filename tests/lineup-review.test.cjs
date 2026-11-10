@@ -20,7 +20,6 @@ function createLoader(overrides = {}) {
     new Function("require", "module", "exports", source)(
       (name) => {
         if (name in overrides) return overrides[name];
-        if (name === "node:crypto") return require(name);
         if (name === "server-only") return {};
         const target = name.startsWith("@/")
           ? name.slice(2)
@@ -330,39 +329,7 @@ const fakeEnvironment = {
     name === "GEMINI_KEY" ? "synthetic-test-secret" : "gemini-test",
 };
 
-const accessCode = "ab".repeat(32);
-const requestHeaders = {
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${accessCode}`,
-};
-
-// Each test file runs in its own process and uses only a fixture access code.
-process.env.LINEUP_ACCESS_TOKEN = accessCode;
-
-test("paid ratings require a configured code before reading input or contacting services", async (t) => {
-  const { POST } = createLoader({
-    "@/lib/db": { query: () => assert.fail("Unexpected database query") },
-  })("app/api/lineup-review/route.ts");
-  t.mock.method(globalThis, "fetch", () => assert.fail("Unexpected provider request"));
-  t.after(() => { process.env.LINEUP_ACCESS_TOKEN = accessCode; });
-  for (const [configured, authorization, status] of [
-    [undefined, requestHeaders.Authorization, 503],
-    ["weak", "Bearer weak", 503],
-    [accessCode, "", 401],
-    [accessCode, `Bearer ${"cd".repeat(32)}`, 401],
-  ]) {
-    if (configured === undefined) delete process.env.LINEUP_ACCESS_TOKEN;
-    else process.env.LINEUP_ACCESS_TOKEN = configured;
-    const response = await POST(new Request("http://localhost/api/lineup-review", {
-      method: "POST", headers: { Authorization: authorization }, body: "invalid JSON",
-    }));
-    assert.equal(response.status, status);
-    assert.equal(response.headers.get("cache-control"), "no-store");
-    assert.ok(!(await response.text()).includes(accessCode));
-  }
-});
-
-test("POST integrates validation, database, prompt, Gemini structured output, and result validation", async (t) => {
+test("a lineup-only POST returns a rating using the server's Gemini key", async (t) => {
   let sent;
   t.mock.method(globalThis, "fetch", async (url, options) => {
     sent = { url, options, body: JSON.parse(options.body) };
@@ -376,7 +343,7 @@ test("POST integrates validation, database, prompt, Gemini structured output, an
   const response = await POST(
     new Request("http://localhost/api/lineup-review", {
       method: "POST",
-      headers: requestHeaders,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input()),
     }),
   );
@@ -392,7 +359,6 @@ test("POST integrates validation, database, prompt, Gemini structured output, an
   assert.equal(sent.options.headers["x-goog-api-key"], "synthetic-test-secret");
   assert.ok(!sent.url.includes("synthetic-test-secret"));
   assert.ok(!sent.options.body.includes("synthetic-test-secret"));
-  assert.ok(!JSON.stringify(sent.options).includes(accessCode));
 });
 
 test("API rejects malformed, oversized, and invalid input before fetching data or AI", async () => {
@@ -413,7 +379,7 @@ test("API rejects malformed, oversized, and invalid input before fetching data o
     const response = await POST(
       new Request("http://localhost/api/lineup-review", {
         method: "POST",
-        headers: requestHeaders,
+        headers: { "Content-Type": "application/json" },
         body,
       }),
     );
@@ -480,7 +446,7 @@ test("POST returns safe status-specific messages and keeps provider details priv
     const result = await POST(
       new Request("http://localhost/api/lineup-review", {
         method: "POST",
-        headers: requestHeaders,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input()),
       }),
     );
